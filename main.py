@@ -1,0 +1,54 @@
+import json
+import os  # For environment variable usage
+
+import requests
+import uvicorn
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+
+class Prompt(BaseModel):
+    prompt: str
+
+
+@app.post("/generate")
+def generate_text(prompt: Prompt):
+    try:
+        # Use environment variables for host and model, with fallbacks
+        ollama_host = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
+        ollama_model = os.getenv("OLLAMA_MODEL", "deepseek-r1")
+
+        response = requests.post(
+            f"{ollama_host}/api/generate",  # Dynamic host
+            json={"model": ollama_model, "prompt": prompt.prompt},  # Model and prompt
+            stream=True,
+            timeout=120,  # Allow time for the model to respond
+        )
+        response.raise_for_status()  # Raise exception for HTTP errors
+
+        output = ""
+        for line in response.iter_lines():
+            if line:
+                data = line.decode("utf-8").strip()
+                if data.startswith("data: "):
+                    data = data[len("data: ") :]
+                if data == "[DONE]":
+                    break
+                try:
+                    chunk = json.loads(data)
+                    output += chunk.get("response") or chunk.get("text") or ""
+                except json.JSONDecodeError:
+                    print(f"Warning: Could not decode JSON from line: {data}")
+                    continue
+
+        return {"response": output.strip() or "(Empty response from model)"}
+
+    except requests.RequestException as e:
+        return {"error": f"Ollama request failed: {str(e)}"}
+
+
+if __name__ == "__main__":
+    # For development, set reload=True; for production, use reload=False
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=False)
