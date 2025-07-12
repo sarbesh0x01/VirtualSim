@@ -1,0 +1,4 @@
+dotenv
+langchain
+langchain_ollama
+fastapi

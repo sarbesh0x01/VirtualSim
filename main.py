@@ -1,54 +1,26 @@
-import json
-import os  # For environment variable usage
-
-import requests
-import uvicorn
+import os
+from dotenv import load_dotenv
 from fastapi import FastAPI
-from pydantic import BaseModel
-
-app = FastAPI()
-
-
-class Prompt(BaseModel):
-    prompt: str
+from langchain_core import prompts
+from langchain_ollama.llms import OllamaLLM
+from langchain_core.prompts import ChatPromptTemplate
 
 
-@app.post("/generate")
-def generate_text(prompt: Prompt):
-    try:
-        # Use environment variables for host and model, with fallbacks
-        ollama_host = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
-        ollama_model = os.getenv("OLLAMA_MODEL", "deepseek-r1")
-
-        response = requests.post(
-            f"{ollama_host}/api/generate",  # Dynamic host
-            json={"model": ollama_model, "prompt": prompt.prompt},  # Model and prompt
-            stream=True,
-            timeout=120,  # Allow time for the model to respond
-        )
-        response.raise_for_status()  # Raise exception for HTTP errors
-
-        output = ""
-        for line in response.iter_lines():
-            if line:
-                data = line.decode("utf-8").strip()
-                if data.startswith("data: "):
-                    data = data[len("data: ") :]
-                if data == "[DONE]":
-                    break
-                try:
-                    chunk = json.loads(data)
-                    output += chunk.get("response") or chunk.get("text") or ""
-                except json.JSONDecodeError:
-                    print(f"Warning: Could not decode JSON from line: {data}")
-                    continue
-
-        return {"response": output.strip() or "(Empty response from model)"}
-
-    except requests.RequestException as e:
-        return {"error": f"Ollama request failed: {str(e)}"}
+model = OllamaLLM(model="deepseek-r1")
 
 
-if __name__ == "__main__":
-    # For development, set reload=True; for production, use reload=False
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=False)
+template = """
+            You are a game NPC in an isekai world, interact with the player and don't let them know that this is an isekai world
+
+            This is the background of the game : {reviews}
+
+            This is the question : {question}
+
+"""
+prompt = ChatPromptTemplate.from_template(template)
+
+chain = prompt | model
+
+result = chain.invoke({"reviews": [], "question": "Where am i , what is this place"})
+
+print(result)

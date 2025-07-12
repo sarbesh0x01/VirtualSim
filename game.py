@@ -1,4 +1,3 @@
-import json
 import sys
 import threading
 from enum import Enum
@@ -263,9 +262,9 @@ class LLMGame:
                 # Update conversation history
                 if npc_key not in self.conversation_history:
                     self.conversation_history[npc_key] = ""
-                self.conversation_history[npc_key] += (
-                    f"Player: {self.dialogue.player_input}\n{GameConfig.NPCS[npc_key]['name']}: {ai_response}\n"
-                )
+                self.conversation_history[
+                    npc_key
+                ] += f"Player: {self.dialogue.player_input}\n{GameConfig.NPCS[npc_key]['name']}: {ai_response}\n"
 
                 # Update dialogue
                 self.dialogue.set_npc_response(ai_response)
