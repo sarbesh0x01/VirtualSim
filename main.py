@@ -4,18 +4,39 @@ from fastapi import FastAPI
 from langchain_core import prompts
 from langchain_ollama.llms import OllamaLLM
 from langchain_core.prompts import ChatPromptTemplate
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+
+app = FastAPI()
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 model = OllamaLLM(model="deepseek-r1")
-
+model2 = OllamaLLM(model="deepseek-r1")
 
 template = """
-            You are a game NPC in an isekai world, interact with the player and don't let them know that this is an isekai world
+            {{ 
+           {{
+            You are a Person, Express Behaviour Like an actual human being. 
+            You are a civilian of Place ( Extopia ). 
+            It is ruled by a king and their is a prophecy a outlander will arrive to destory the world
+            Traits that you have : 
+            Profession :              A guide. 
+            Emotion : jolly
+            }}
 
-            This is the background of the game : {reviews}
+            Your Job is to answer question to anybody who asks
 
             This is the question : {question}
-
 """
 prompt = ChatPromptTemplate.from_template(template)
 
